@@ -2,14 +2,15 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>高小：修辭高手大挑戰</title>
   <link rel="stylesheet" href="assets/tailwind.css">
+  <script src="assets/zoom-lock.js"></script>
   <style>
     * { -webkit-tap-highlight-color: transparent; user-select: none; }
     body {
       font-family: 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', sans-serif;
-      touch-action: manipulation; background-color: #090d16; color: #f8fafc;
+      touch-action: pan-x pan-y; background-color: #090d16; color: #f8fafc;
       min-height: 100vh; min-height: 100dvh; width: 100%; overflow-x: hidden; overflow-y: auto;
       padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
       display: flex; flex-direction: column; justify-content: space-between;
@@ -18,6 +19,7 @@
     .touch-btn { transition: transform 0.08s ease, opacity 0.08s ease; }
     .touch-btn:active { transform: scale(0.93); }
     .touch-btn:disabled { opacity: 0.5; transform: none; cursor: wait; }
+    .answer-btn { touch-action: none; }
     .feedback { min-height: 2rem; font-weight: 800; }
     .feedback-correct { color: #6ee7b7; }
     .feedback-wrong { color: #fda4af; }
@@ -28,7 +30,7 @@
   <div id="startScreen" role="dialog" aria-modal="true" aria-labelledby="startTitle" class="absolute inset-0 z-50 flex flex-col items-center justify-center p-6 bg-slate-950/95 backdrop-blur-lg">
     <div class="text-center max-w-2xl space-y-6">
       <h1 id="startTitle" class="text-5xl font-black font-game text-amber-400">高小：修辭高手大挑戰</h1>
-      <p class="text-slate-300">涵蓋 7 大修辭法（比喻、擬人、誇張、排比、設問、反問、對偶），雙人搶答打怪獸！共 15 題，先按先作答。</p>
+      <p class="text-slate-300">涵蓋 7 大修辭法（比喻、擬人、誇張、排比、設問、反問、對偶）。兩位玩家每題各答一次，合力攻擊 Boss！共 15 題。</p>
       <button onclick="game.startNewGame()" class="w-full py-5 bg-gradient-to-r from-amber-500 to-red-500 text-slate-950 font-black text-2xl rounded-2xl font-game">⚔️ 開始挑戰</button>
       <a href="index.html" class="block text-slate-400 font-bold hover:underline">🏠 返回主頁</a>
     </div>
@@ -136,7 +138,9 @@
       constructor() {
         this.currentIndex = 0; this.maxHp = 400; this.hp = this.maxHp;
         this.scores = { p1: 0, p2: 0 }; this.questions = [];
-        this.acceptingAnswers = false; this.answerTimer = null;
+        this.roundActive = false; this.answerTimer = null;
+        this.roundAnswers = { p1: false, p2: false };
+        this.roundSelections = { p1: null, p2: null };
       }
       startNewGame() {
         clearTimeout(this.answerTimer);
@@ -145,13 +149,18 @@
         this.questions = [...rawQuestions].sort(() => Math.random() - 0.5).slice(0, 15);
         this.currentIndex = 0; this.hp = this.maxHp;
         this.scores = { p1: 0, p2: 0 };
+        this.roundAnswers = { p1: false, p2: false };
+        this.roundSelections = { p1: null, p2: null };
         document.getElementById('answerFeedback').textContent = '\u00a0';
         this.updateUI(); this.nextQ();
       }
       nextQ() {
         if (this.currentIndex >= this.questions.length) { this.endGame(); return; }
-        this.acceptingAnswers = true;
-        this.setButtonsDisabled(false);
+        this.roundActive = true;
+        this.roundAnswers = { p1: false, p2: false };
+        this.roundSelections = { p1: null, p2: null };
+        this.setPlayerButtonsDisabled('p1', false);
+        this.setPlayerButtonsDisabled('p2', false);
         const q = this.questions[this.currentIndex];
         document.getElementById('questionNumBadge').innerText = `題目 ${this.currentIndex + 1} / ${this.questions.length}`;
         document.getElementById('questionText').innerText = q.q;
@@ -166,19 +175,23 @@
           q.options.forEach((opt, idx) => {
             const btn = document.createElement('button');
             btn.dataset.answerButton = '';
+            btn.dataset.player = playerKey;
             btn.className = playerKey === 'p1'
-              ? 'touch-btn h-12 bg-amber-500 text-slate-950 font-black rounded-xl border border-amber-300 font-game'
-              : 'touch-btn h-12 bg-sky-600 text-white font-black rounded-xl border border-sky-300 font-game';
+              ? 'answer-btn touch-btn h-12 bg-amber-500 text-slate-950 font-black rounded-xl border border-amber-300 font-game'
+              : 'answer-btn touch-btn h-12 bg-sky-600 text-white font-black rounded-xl border border-sky-300 font-game';
             btn.innerText = opt;
-            btn.onclick = () => this.handleAnswer(playerKey, idx, q);
+            const submitAnswer = () => this.handleAnswer(playerKey, idx, q);
+            btn.addEventListener('pointerdown', submitAnswer);
+            btn.onclick = submitAnswer;
             box.appendChild(btn);
           });
         });
       }
       handleAnswer(playerKey, optionIndex, question) {
-        if (!this.acceptingAnswers || question !== this.questions[this.currentIndex]) return;
-        this.acceptingAnswers = false;
-        this.setButtonsDisabled(true);
+        if (!this.roundActive || this.roundAnswers[playerKey] || question !== this.questions[this.currentIndex]) return;
+        this.roundAnswers[playerKey] = true;
+        this.roundSelections[playerKey] = optionIndex;
+        this.setPlayerButtonsDisabled(playerKey, true);
         const isCorrect = optionIndex === question.answer;
         if (isCorrect) {
           this.scores[playerKey]++;
@@ -187,18 +200,30 @@
         playSound(isCorrect ? 'hit' : 'miss');
         this.updateUI();
         const feedback = document.getElementById('answerFeedback');
-        feedback.textContent = isCorrect
-          ? `✅ ${playerKey === 'p1' ? 'P1' : 'P2'} 答對了，Boss 受到 80 點傷害！`
-          : `❌ 答錯了，正確答案是「${question.options[question.answer]}」。`;
-        feedback.className = `feedback mt-2 text-sm ${isCorrect ? 'feedback-correct' : 'feedback-wrong'}`;
+        if (!this.roundAnswers.p1 || !this.roundAnswers.p2) {
+          const waitingFor = playerKey === 'p1' ? 'P2' : 'P1';
+          feedback.textContent = `${playerKey.toUpperCase()} 已作答，等待 ${waitingFor}…`;
+          feedback.className = 'feedback mt-2 text-sm text-slate-300';
+          return;
+        }
 
+        this.roundActive = false;
+        this.setButtonsDisabled(true);
+        const p1Correct = this.roundSelections.p1 === question.answer;
+        const p2Correct = this.roundSelections.p2 === question.answer;
+        feedback.textContent = `P1 ${p1Correct ? '✅' : '❌'} · P2 ${p2Correct ? '✅' : '❌'}　正確答案：${question.options[question.answer]}`;
+        feedback.className = `feedback mt-2 text-sm ${p1Correct || p2Correct ? 'feedback-correct' : 'feedback-wrong'}`;
         this.answerTimer = setTimeout(() => {
           this.currentIndex++;
           this.nextQ();
-        }, 800);
+        }, 850);
+      }
+      setPlayerButtonsDisabled(playerKey, disabled) {
+        document.querySelectorAll(`[data-player="${playerKey}"]`).forEach(button => { button.disabled = disabled; });
       }
       setButtonsDisabled(disabled) {
-        document.querySelectorAll('[data-answer-button]').forEach(button => { button.disabled = disabled; });
+        this.setPlayerButtonsDisabled('p1', disabled);
+        this.setPlayerButtonsDisabled('p2', disabled);
       }
       updateUI() {
         document.getElementById('monsterHpText').innerText = `${this.hp} / ${this.maxHp}`;
@@ -208,7 +233,7 @@
       }
       endGame() {
         clearTimeout(this.answerTimer);
-        this.acceptingAnswers = false;
+        this.roundActive = false;
         this.setButtonsDisabled(true);
         const success = this.hp <= 0;
         const title = document.getElementById('resultTitle');

@@ -2,14 +2,15 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>中小：修辭拔河大作戰</title>
   <link rel="stylesheet" href="assets/tailwind.css">
+  <script src="assets/zoom-lock.js"></script>
   <style>
     * { -webkit-tap-highlight-color: transparent; user-select: none; }
     body {
       font-family: 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', sans-serif;
-      touch-action: manipulation; background: linear-gradient(135deg, #fce7f3 0%, #e0f2fe 50%, #fef3c7 100%);
+      touch-action: pan-x pan-y; background: linear-gradient(135deg, #fce7f3 0%, #e0f2fe 50%, #fef3c7 100%);
       min-height: 100vh; min-height: 100dvh; width: 100%; overflow-x: hidden; overflow-y: auto;
       padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
       display: flex; flex-direction: column; justify-content: space-between;
@@ -19,6 +20,7 @@
     .touch-btn { transition: all 0.1s; box-shadow: 0 8px 0px rgba(0, 0, 0, 0.15); }
     .touch-btn:active { transform: translateY(6px); box-shadow: 0 2px 0px rgba(0, 0, 0, 0.15); }
     .touch-btn:disabled { opacity: 0.55; transform: none; cursor: wait; }
+    .answer-btn { touch-action: none; }
     .feedback { min-height: 2rem; font-weight: 800; transition: color 0.15s ease; }
     .feedback-correct { color: #047857; }
     .feedback-wrong { color: #be123c; }
@@ -29,7 +31,7 @@
   <div id="startModal" role="dialog" aria-modal="true" aria-labelledby="startTitle" class="absolute inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
     <div class="cute-card rounded-3xl p-6 md:p-10 max-w-xl w-full text-center space-y-6">
       <h1 id="startTitle" class="text-4xl md:text-5xl font-black font-game text-pink-500">中小：修辭拔河大作戰</h1>
-      <p class="text-slate-700 font-bold">辨別「比喻」與「擬人」修辭，率先將繩子拉過去獲勝！共 15 題。</p>
+      <p class="text-slate-700 font-bold">辨別「比喻」與「擬人」修辭。每人每題各答一次，合力作答後前進；先將繩子拉過界者獲勝，最多 15 題。</p>
       <button onclick="game.startGame()" class="touch-btn w-full py-4 bg-gradient-to-r from-pink-400 to-amber-400 text-white font-black text-2xl rounded-2xl font-game">🚀 開始拔河對戰！</button>
       <a href="index.html" class="block text-slate-500 font-bold hover:underline mt-2">🏠 返回主頁</a>
     </div>
@@ -58,12 +60,12 @@
   <footer class="w-full max-w-5xl mx-auto px-4 pb-4">
     <div class="grid grid-cols-2 gap-4">
       <div class="cute-card p-3 rounded-3xl border-2 border-pink-200 grid grid-cols-2 gap-2">
-        <button data-answer-button onclick="game.handleAnswer('p1', '比喻')" class="touch-btn py-4 bg-pink-400 text-white font-black text-xl rounded-2xl font-game">比喻</button>
-        <button data-answer-button onclick="game.handleAnswer('p1', '擬人')" class="touch-btn py-4 bg-rose-400 text-white font-black text-xl rounded-2xl font-game">擬人</button>
+        <button data-answer-button data-player="p1" data-answer="比喻" class="answer-btn touch-btn py-4 bg-pink-400 text-white font-black text-xl rounded-2xl font-game">比喻</button>
+        <button data-answer-button data-player="p1" data-answer="擬人" class="answer-btn touch-btn py-4 bg-rose-400 text-white font-black text-xl rounded-2xl font-game">擬人</button>
       </div>
       <div class="cute-card p-3 rounded-3xl border-2 border-sky-200 grid grid-cols-2 gap-2">
-        <button data-answer-button onclick="game.handleAnswer('p2', '比喻')" class="touch-btn py-4 bg-sky-400 text-white font-black text-xl rounded-2xl font-game">比喻</button>
-        <button data-answer-button onclick="game.handleAnswer('p2', '擬人')" class="touch-btn py-4 bg-indigo-400 text-white font-black text-xl rounded-2xl font-game">擬人</button>
+        <button data-answer-button data-player="p2" data-answer="比喻" class="answer-btn touch-btn py-4 bg-sky-400 text-white font-black text-xl rounded-2xl font-game">比喻</button>
+        <button data-answer-button data-player="p2" data-answer="擬人" class="answer-btn touch-btn py-4 bg-indigo-400 text-white font-black text-xl rounded-2xl font-game">擬人</button>
       </div>
     </div>
   </footer>
@@ -135,7 +137,9 @@
       constructor() {
         this.currentIndex = 0; this.ropePosition = 50;
         this.p1 = { score: 0 }; this.p2 = { score: 0 };
-        this.questions = []; this.acceptingAnswers = false; this.answerTimer = null;
+        this.questions = []; this.roundActive = false; this.answerTimer = null;
+        this.roundAnswers = { p1: false, p2: false };
+        this.roundSelections = { p1: null, p2: null };
       }
       startGame() {
         clearTimeout(this.answerTimer);
@@ -144,27 +148,37 @@
         this.questions = [...rawQuestions].sort(() => Math.random() - 0.5);
         this.currentIndex = 0; this.ropePosition = 50;
         this.p1 = { score: 0 }; this.p2 = { score: 0 };
+        this.roundAnswers = { p1: false, p2: false };
+        this.roundSelections = { p1: null, p2: null };
         document.getElementById('ropeRibbon').style.left = '50%';
         document.getElementById('answerFeedback').textContent = '\u00a0';
         this.updateUI(); this.showQuestion();
       }
       showQuestion() {
         if (this.currentIndex >= this.questions.length) { this.endGame(); return; }
-        this.acceptingAnswers = true;
-        this.setButtonsDisabled(false);
+        this.roundActive = true;
+        this.roundAnswers = { p1: false, p2: false };
+        this.roundSelections = { p1: null, p2: null };
+        this.setPlayerButtonsDisabled('p1', false);
+        this.setPlayerButtonsDisabled('p2', false);
         document.getElementById('progressText').innerText = `${this.currentIndex + 1} / ${this.questions.length}`;
         document.getElementById('questionText').innerText = this.questions[this.currentIndex].q;
         const feedback = document.getElementById('answerFeedback');
         feedback.textContent = '\u00a0';
         feedback.className = 'feedback mt-2 text-sm text-slate-600';
       }
+      setPlayerButtonsDisabled(playerKey, disabled) {
+        document.querySelectorAll(`[data-player="${playerKey}"]`).forEach(button => { button.disabled = disabled; });
+      }
       setButtonsDisabled(disabled) {
-        document.querySelectorAll('[data-answer-button]').forEach(button => { button.disabled = disabled; });
+        this.setPlayerButtonsDisabled('p1', disabled);
+        this.setPlayerButtonsDisabled('p2', disabled);
       }
       handleAnswer(playerKey, chosen) {
-        if (!this.acceptingAnswers || this.currentIndex >= this.questions.length) return;
-        this.acceptingAnswers = false;
-        this.setButtonsDisabled(true);
+        if (!this.roundActive || this.roundAnswers[playerKey] || this.currentIndex >= this.questions.length) return;
+        this.roundAnswers[playerKey] = true;
+        this.roundSelections[playerKey] = chosen;
+        this.setPlayerButtonsDisabled(playerKey, true);
         playSound('pop');
         const currentQ = this.questions[this.currentIndex];
         const isCorrect = chosen === currentQ.type;
@@ -176,10 +190,19 @@
         document.getElementById('ropeRibbon').style.left = `${this.ropePosition}%`;
         this.updateUI();
         const feedback = document.getElementById('answerFeedback');
-        feedback.textContent = isCorrect
-          ? `✅ 答對了！${playerKey === 'p1' ? '小兔隊' : '小熊隊'}把繩子拉住！`
-          : `❌ 答錯了，這題是「${currentQ.type}」。`;
-        feedback.className = `feedback mt-2 text-sm ${isCorrect ? 'feedback-correct' : 'feedback-wrong'}`;
+        if (!this.roundAnswers.p1 || !this.roundAnswers.p2) {
+          const waitingFor = playerKey === 'p1' ? 'P2' : 'P1';
+          feedback.textContent = `${playerKey.toUpperCase()} 已作答，等待 ${waitingFor}…`;
+          feedback.className = 'feedback mt-2 text-sm text-slate-600';
+          return;
+        }
+
+        this.roundActive = false;
+        this.setButtonsDisabled(true);
+        const p1Correct = this.roundSelections.p1 === currentQ.type;
+        const p2Correct = this.roundSelections.p2 === currentQ.type;
+        feedback.textContent = `P1 ${p1Correct ? '✅' : '❌'} · P2 ${p2Correct ? '✅' : '❌'}　正確答案：${currentQ.type}`;
+        feedback.className = `feedback mt-2 text-sm ${p1Correct || p2Correct ? 'feedback-correct' : 'feedback-wrong'}`;
 
         this.answerTimer = setTimeout(() => {
           this.currentIndex++;
@@ -188,7 +211,7 @@
           } else {
             this.showQuestion();
           }
-        }, 700);
+        }, 850);
       }
       updateUI() {
         document.getElementById('p1Score').innerText = this.p1.score;
@@ -196,7 +219,7 @@
       }
       endGame() {
         clearTimeout(this.answerTimer);
-        this.acceptingAnswers = false;
+        this.roundActive = false;
         this.setButtonsDisabled(true);
         playSound('win');
         document.getElementById('resultModal').classList.remove('hidden');
@@ -205,6 +228,11 @@
       }
     }
     const game = new TugGameEngine();
+    document.querySelectorAll('[data-answer-button]').forEach(button => {
+      const submit = () => game.handleAnswer(button.dataset.player, button.dataset.answer);
+      button.addEventListener('pointerdown', submit);
+      button.addEventListener('click', submit);
+    });
   </script>
 </body>
 </html>

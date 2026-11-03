@@ -2,14 +2,15 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>小學語文趣味互動遊戲樂園 - 選擇遊戲</title>
     <link rel="stylesheet" href="assets/tailwind.css">
+    <script src="assets/zoom-lock.js"></script>
     <style>
         * { -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
         body {
             font-family: 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', sans-serif;
-            touch-action: manipulation;
+            touch-action: pan-x pan-y;
             background: linear-gradient(135deg, #fef3c7 0%, #e0f2fe 50%, #fce7f3 100%);
             color: #334155; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; justify-content: space-between; overflow-x: hidden; position: relative;
             padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
@@ -60,7 +61,7 @@
                 <div class="w-16 h-16 bg-pink-100 border-2 border-pink-300 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-inner group-hover:scale-110 transition-transform">🐰🐻</div>
                 <div class="inline-block bg-pink-100 text-pink-700 font-bold px-2.5 py-0.5 rounded-full text-xs mb-2">修辭辨別 ‧ 歡樂拔河</div>
                 <h2 class="text-2xl font-black font-game text-slate-800 mb-2 group-hover:text-pink-600 transition-colors">中小：修辭拔河大作戰</h2>
-                <p class="text-slate-600 font-bold text-xs sm:text-sm leading-relaxed mb-6">判斷「比喻」與「擬人」修辭！答對將繩子往自家方向拉，答錯會顯示正確答案，先拉過界就獲勝！</p>
+                <p class="text-slate-600 font-bold text-xs sm:text-sm leading-relaxed mb-6">兩位玩家同時判斷「比喻」與「擬人」！每題各自作答一次，答對將繩子往自家方向拉，先拉過界就獲勝！</p>
             </div>
             <div class="w-full bg-gradient-to-r from-pink-400 to-rose-500 text-white font-black py-3 rounded-xl text-center shadow-md btn-3d">▶ 進入中小遊戲</div>
         </a>
@@ -71,7 +72,7 @@
                 <div class="w-16 h-16 bg-indigo-100 border-2 border-indigo-300 rounded-2xl flex items-center justify-center text-3xl mb-4 shadow-inner group-hover:scale-110 transition-transform">👾⚔️</div>
                 <div class="inline-block bg-indigo-100 text-indigo-700 font-bold px-2.5 py-0.5 rounded-full text-xs mb-2">七大修辭 ‧ 打怪獸模式</div>
                 <h2 class="text-2xl font-black font-game text-slate-800 mb-2 group-hover:text-indigo-600 transition-colors">高小：修辭高手大挑戰</h2>
-                <p class="text-slate-600 font-bold text-xs sm:text-sm leading-relaxed mb-6">涵蓋 7 大修辭法的 15 題挑戰！雙人搶答攻擊怪獸，合力擊倒 Boss 並爭奪 MVP！</p>
+                <p class="text-slate-600 font-bold text-xs sm:text-sm leading-relaxed mb-6">涵蓋 7 大修辭法的 15 題挑戰！雙人同時作答攻擊怪獸，合力擊倒 Boss 並爭奪 MVP！</p>
             </div>
             <div class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-black py-3 rounded-xl text-center shadow-md btn-3d">▶ 進入高小遊戲</div>
         </a>

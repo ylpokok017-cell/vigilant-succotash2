@@ -2,13 +2,14 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>低小：文字登山王</title>
     <link rel="stylesheet" href="assets/tailwind.css">
+    <script src="assets/zoom-lock.js"></script>
     <style>
         body {
             font-family: 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', sans-serif;
-            user-select: none; touch-action: manipulation; min-height: 100vh; min-height: 100dvh;
+            user-select: none; touch-action: pan-x pan-y; min-height: 100vh; min-height: 100dvh;
             padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
         }
         @keyframes floatCloud { 0% { transform: translateX(-100%); } 100% { transform: translateX(100vw); } }
@@ -19,6 +20,7 @@
         .drop-shake { animation: shakeDrop 0.4s ease-in-out; }
         .btn-3d { transition: all 0.08s ease; box-shadow: 0 5px 0 rgba(0,0,0,0.18); }
         .btn-3d:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.18); }
+        .answer-btn { touch-action: none; }
         .card-gloss { background: linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(240,249,255,0.92) 100%); backdrop-filter: blur(8px); }
         @keyframes flashRed { 0%, 100% { opacity: 0; } 50% { opacity: 0.25; } }
         .flash-error { animation: flashRed 0.35s ease-in-out; }
@@ -209,9 +211,11 @@
             const questionIndex = p.questionIndex;
             q.options.forEach(opt => {
                 const btn = document.createElement('button');
-                btn.className = 'bg-white text-slate-800 font-black text-xl py-2 rounded-lg border shadow-sm btn-3d';
+                btn.className = 'answer-btn bg-white text-slate-800 font-black text-xl py-2 rounded-lg border shadow-sm btn-3d';
                 btn.innerText = opt;
-                btn.onclick = () => handleAns(pNum, opt, q.answer, questionIndex);
+                const submitAnswer = () => handleAns(pNum, opt, q.answer, questionIndex);
+                btn.addEventListener('pointerdown', submitAnswer);
+                btn.onclick = submitAnswer;
                 grid.appendChild(btn);
             });
         }
