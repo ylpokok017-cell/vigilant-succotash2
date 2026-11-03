@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>中小：修辭拔河大作戰</title>
+  <link rel="stylesheet" href="assets/tailwind.css">
+  <style>
+    * { -webkit-tap-highlight-color: transparent; user-select: none; }
+    body {
+      font-family: 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', sans-serif;
+      touch-action: manipulation; background: linear-gradient(135deg, #fce7f3 0%, #e0f2fe 50%, #fef3c7 100%);
+      min-height: 100vh; min-height: 100dvh; width: 100%; overflow-x: hidden; overflow-y: auto;
+      padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .font-game { font-family: 'Arial Rounded MT Bold', 'PingFang TC', 'Microsoft JhengHei', sans-serif; }
+    .cute-card { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 4px solid #ffffff; box-shadow: 0 12px 24px -6px rgba(148, 163, 184, 0.3); }
+    .touch-btn { transition: all 0.1s; box-shadow: 0 8px 0px rgba(0, 0, 0, 0.15); }
+    .touch-btn:active { transform: translateY(6px); box-shadow: 0 2px 0px rgba(0, 0, 0, 0.15); }
+    .touch-btn:disabled { opacity: 0.55; transform: none; cursor: wait; }
+    .feedback { min-height: 2rem; font-weight: 800; transition: color 0.15s ease; }
+    .feedback-correct { color: #047857; }
+    .feedback-wrong { color: #be123c; }
+  </style>
+</head>
+<body class="relative">
+  <!-- 開始畫面 Modal -->
+  <div id="startModal" role="dialog" aria-modal="true" aria-labelledby="startTitle" class="absolute inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
+    <div class="cute-card rounded-3xl p-6 md:p-10 max-w-xl w-full text-center space-y-6">
+      <h1 id="startTitle" class="text-4xl md:text-5xl font-black font-game text-pink-500">中小：修辭拔河大作戰</h1>
+      <p class="text-slate-700 font-bold">辨別「比喻」與「擬人」修辭，率先將繩子拉過去獲勝！共 15 題。</p>
+      <button onclick="game.startGame()" class="touch-btn w-full py-4 bg-gradient-to-r from-pink-400 to-amber-400 text-white font-black text-2xl rounded-2xl font-game">🚀 開始拔河對戰！</button>
+      <a href="index.html" class="block text-slate-500 font-bold hover:underline mt-2">🏠 返回主頁</a>
+    </div>
+  </div>
+
+  <header class="w-full max-w-5xl mx-auto px-4 pt-4 flex justify-between items-center">
+    <div class="cute-card px-4 py-2 rounded-2xl border-2 border-pink-300">🐰 P1 分數: <span id="p1Score">0</span></div>
+    <div class="cute-card px-6 py-2 rounded-2xl border-2 border-amber-300">進度: <span id="progressText">1 / 15</span></div>
+    <div class="cute-card px-4 py-2 rounded-2xl border-2 border-sky-300">🐻 P2 分數: <span id="p2Score">0</span></div>
+  </header>
+
+  <main class="w-full max-w-5xl mx-auto px-4 my-auto flex flex-col items-center flex-1 justify-center">
+    <div class="w-full cute-card rounded-3xl p-6 my-3 relative flex items-center justify-between px-12">
+      <div class="text-6xl">🐰</div>
+      <div class="flex-1 mx-8 relative h-6 bg-amber-800 rounded-full">
+        <div id="ropeRibbon" class="absolute top-1/2 -translate-y-1/2 w-6 h-10 bg-red-500 rounded-md transition-all duration-300" style="left: 50%;"></div>
+      </div>
+      <div class="text-6xl">🐻</div>
+    </div>
+    <div class="w-full cute-card rounded-3xl p-6 text-center border-4 border-amber-200">
+      <h2 id="questionText" class="text-xl md:text-2xl font-black text-slate-800">載入中...</h2>
+      <div id="answerFeedback" class="feedback mt-2 text-sm text-slate-600" aria-live="polite">&nbsp;</div>
+    </div>
+  </main>
+
+  <footer class="w-full max-w-5xl mx-auto px-4 pb-4">
+    <div class="grid grid-cols-2 gap-4">
+      <div class="cute-card p-3 rounded-3xl border-2 border-pink-200 grid grid-cols-2 gap-2">
+        <button data-answer-button onclick="game.handleAnswer('p1', '比喻')" class="touch-btn py-4 bg-pink-400 text-white font-black text-xl rounded-2xl font-game">比喻</button>
+        <button data-answer-button onclick="game.handleAnswer('p1', '擬人')" class="touch-btn py-4 bg-rose-400 text-white font-black text-xl rounded-2xl font-game">擬人</button>
+      </div>
+      <div class="cute-card p-3 rounded-3xl border-2 border-sky-200 grid grid-cols-2 gap-2">
+        <button data-answer-button onclick="game.handleAnswer('p2', '比喻')" class="touch-btn py-4 bg-sky-400 text-white font-black text-xl rounded-2xl font-game">比喻</button>
+        <button data-answer-button onclick="game.handleAnswer('p2', '擬人')" class="touch-btn py-4 bg-indigo-400 text-white font-black text-xl rounded-2xl font-game">擬人</button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 結算 Modal -->
+  <div id="resultModal" role="dialog" aria-modal="true" aria-labelledby="winnerText" class="hidden absolute inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/50 backdrop-blur-md">
+    <div class="cute-card rounded-3xl p-8 max-w-lg w-full text-center space-y-6">
+      <h2 id="winnerText" class="text-3xl font-black text-pink-500 font-game">拔河大戰結束！</h2>
+      <p id="resultSummary" class="text-slate-600 font-bold"></p>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button onclick="game.startGame()" class="touch-btn flex-1 py-4 bg-amber-400 text-white font-black text-xl rounded-2xl font-game">🔄 再拔一次</button>
+        <a href="index.html" class="touch-btn flex-1 py-4 bg-slate-500 text-white font-black text-xl rounded-2xl font-game text-center flex items-center justify-center">🏠 返回主頁</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 完整原版 15 題修辭題庫[cite: 2]
+    const rawQuestions = [
+      { q: "「太陽公公露出了溫暖燦爛的微笑。」", type: "擬人" },
+      { q: "「妹妹的臉蛋紅得像熟透的大蘋果。」", type: "比喻" },
+      { q: "「小溪在山谷裡快樂地唱著歌。」", type: "擬人" },
+      { q: "「時間就像奔流不息的大河一樣往前流。」", type: "比喻" },
+      { q: "「花兒在微風中翩翩起舞。」", type: "擬人" },
+      { q: "「他的眼睛像夜空中閃耀的星星。」", type: "比喻" },
+      { q: "「頑皮的雨滴在屋頂上跳芭蕾舞。」", type: "擬人" },
+      { q: "「遠處的山峰像一頂巨大的綠色帳篷。」", type: "比喻" },
+      { q: "「風兒溫柔地撫摸著我的臉頰。」", type: "擬人" },
+      { q: "「弟弟跑得像獵豹一樣快。」", type: "比喻" },
+      { q: "「小草努力地從泥土裡探出頭來。」", type: "擬人" },
+      { q: "「月亮像一把彎彎的金黃色小鐮刀。」", type: "比喻" },
+      { q: "「鬧鐘在早上大聲地叫醒我。」", type: "擬人" },
+      { q: "「露珠像一顆顆閃亮的珍珠掛在葉子上。」", type: "比喻" },
+      { q: "「星空向我們眨著頑皮的眼睛。」", type: "擬人" }
+    ];
+
+    let audioCtx = null;
+    function initAudio() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return null;
+      if (!audioCtx) audioCtx = new AudioContextClass();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+    function playSound(type) {
+      try {
+        if (!initAudio()) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+        if (type === 'pop') {
+          osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+          gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+          osc.start(now); osc.stop(now + 0.08);
+        } else if (type === 'win') {
+          [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+            const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+            o.connect(g); g.connect(audioCtx.destination);
+            o.frequency.setValueAtTime(freq, now + i * 0.1);
+            g.gain.setValueAtTime(0.25, now + i * 0.1); g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.1 + 0.25);
+            o.start(now + i * 0.1); o.stop(now + i * 0.1 + 0.25);
+          });
+        }
+      } catch(e){}
+    }
+
+    class TugGameEngine {
+      constructor() {
+        this.currentIndex = 0; this.ropePosition = 50;
+        this.p1 = { score: 0 }; this.p2 = { score: 0 };
+        this.questions = []; this.acceptingAnswers = false; this.answerTimer = null;
+      }
+      startGame() {
+        clearTimeout(this.answerTimer);
+        document.getElementById('startModal').classList.add('hidden');
+        document.getElementById('resultModal').classList.add('hidden');
+        this.questions = [...rawQuestions].sort(() => Math.random() - 0.5);
+        this.currentIndex = 0; this.ropePosition = 50;
+        this.p1 = { score: 0 }; this.p2 = { score: 0 };
+        document.getElementById('ropeRibbon').style.left = '50%';
+        document.getElementById('answerFeedback').textContent = '\u00a0';
+        this.updateUI(); this.showQuestion();
+      }
+      showQuestion() {
+        if (this.currentIndex >= this.questions.length) { this.endGame(); return; }
+        this.acceptingAnswers = true;
+        this.setButtonsDisabled(false);
+        document.getElementById('progressText').innerText = `${this.currentIndex + 1} / ${this.questions.length}`;
+        document.getElementById('questionText').innerText = this.questions[this.currentIndex].q;
+        const feedback = document.getElementById('answerFeedback');
+        feedback.textContent = '\u00a0';
+        feedback.className = 'feedback mt-2 text-sm text-slate-600';
+      }
+      setButtonsDisabled(disabled) {
+        document.querySelectorAll('[data-answer-button]').forEach(button => { button.disabled = disabled; });
+      }
+      handleAnswer(playerKey, chosen) {
+        if (!this.acceptingAnswers || this.currentIndex >= this.questions.length) return;
+        this.acceptingAnswers = false;
+        this.setButtonsDisabled(true);
+        playSound('pop');
+        const currentQ = this.questions[this.currentIndex];
+        const isCorrect = chosen === currentQ.type;
+        if (isCorrect) {
+          this[playerKey].score++;
+          if (playerKey === 'p1') this.ropePosition = Math.max(15, this.ropePosition - 5);
+          else this.ropePosition = Math.min(85, this.ropePosition + 5);
+        }
+        document.getElementById('ropeRibbon').style.left = `${this.ropePosition}%`;
+        this.updateUI();
+        const feedback = document.getElementById('answerFeedback');
+        feedback.textContent = isCorrect
+          ? `✅ 答對了！${playerKey === 'p1' ? '小兔隊' : '小熊隊'}把繩子拉住！`
+          : `❌ 答錯了，這題是「${currentQ.type}」。`;
+        feedback.className = `feedback mt-2 text-sm ${isCorrect ? 'feedback-correct' : 'feedback-wrong'}`;
+
+        this.answerTimer = setTimeout(() => {
+          this.currentIndex++;
+          if (this.ropePosition <= 15 || this.ropePosition >= 85 || this.currentIndex >= this.questions.length) {
+            this.endGame();
+          } else {
+            this.showQuestion();
+          }
+        }, 700);
+      }
+      updateUI() {
+        document.getElementById('p1Score').innerText = this.p1.score;
+        document.getElementById('p2Score').innerText = this.p2.score;
+      }
+      endGame() {
+        clearTimeout(this.answerTimer);
+        this.acceptingAnswers = false;
+        this.setButtonsDisabled(true);
+        playSound('win');
+        document.getElementById('resultModal').classList.remove('hidden');
+        document.getElementById('winnerText').innerText = this.ropePosition < 50 ? '🐰 小兔隊獲勝！' : this.ropePosition > 50 ? '🐻 小熊隊獲勝！' : '🤝 平手！';
+        document.getElementById('resultSummary').innerText = `P1 ${this.p1.score} 分 · P2 ${this.p2.score} 分`;
+      }
+    }
+    const game = new TugGameEngine();
+  </script>
+</body>
+</html>

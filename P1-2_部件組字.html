@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>低小：文字登山王</title>
+    <link rel="stylesheet" href="assets/tailwind.css">
+    <style>
+        body {
+            font-family: 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', sans-serif;
+            user-select: none; touch-action: manipulation; min-height: 100vh; min-height: 100dvh;
+            padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+        }
+        @keyframes floatCloud { 0% { transform: translateX(-100%); } 100% { transform: translateX(100vw); } }
+        .animate-cloud-slow { animation: floatCloud 35s linear infinite; }
+        @keyframes bounceClimb { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-15px) scale(1.15); } }
+        .climb-bounce { animation: bounceClimb 0.35s ease-in-out; }
+        @keyframes shakeDrop { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } }
+        .drop-shake { animation: shakeDrop 0.4s ease-in-out; }
+        .btn-3d { transition: all 0.08s ease; box-shadow: 0 5px 0 rgba(0,0,0,0.18); }
+        .btn-3d:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,0.18); }
+        .card-gloss { background: linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(240,249,255,0.92) 100%); backdrop-filter: blur(8px); }
+        @keyframes flashRed { 0%, 100% { opacity: 0; } 50% { opacity: 0.25; } }
+        .flash-error { animation: flashRed 0.35s ease-in-out; }
+        .confetti-layer { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 100; }
+        .confetti-piece {
+            position: absolute; top: -24px; width: 10px; height: 18px; border-radius: 3px;
+            animation: confettiFall 1.7s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+        }
+        @keyframes confettiFall {
+            to { transform: translate3d(var(--drift), 110vh, 0) rotate(var(--spin)); opacity: 0.85; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .confetti-piece { animation-duration: 0.01ms; }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-b from-sky-300 via-sky-100 to-green-100 min-h-screen flex flex-col justify-between p-2 sm:p-4 select-none">
+    <header class="w-full max-w-4xl mx-auto flex justify-between items-center mb-2">
+        <div class="flex items-center space-x-2">
+            <div class="bg-amber-400 p-2 rounded-xl text-xl shadow" aria-hidden="true">🏔️</div>
+            <h1 class="text-xl sm:text-3xl font-black text-amber-950">低小：文字登山王</h1>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="soundButton" onclick="toggleSound()" aria-label="切換音效" class="bg-white min-w-11 min-h-11 p-2 rounded-xl shadow text-lg font-bold"><span id="soundIcon" aria-hidden="true">🔊</span></button>
+            <a href="index.html" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-xl font-bold text-xs sm:text-sm btn-3d">🏠 返回主頁</a>
+        </div>
+    </header>
+
+    <main class="max-w-4xl w-full mx-auto flex-grow flex flex-col justify-center my-auto">
+        <!-- 開始畫面 -->
+        <div id="startScreen" class="card-gloss rounded-3xl p-6 sm:p-8 shadow-2xl border-4 border-white text-center max-w-lg mx-auto w-full">
+            <h2 class="text-2xl sm:text-4xl font-black text-slate-800 mb-3">🏔️ 雙人極速登山大賽</h2>
+            <p class="text-slate-600 font-bold text-xs sm:text-sm mb-6">答對 +1 階，答錯 -1 階！率先登上第 10 階山頂者獲勝！</p>
+            <button onclick="startGame()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xl py-4 rounded-2xl border-b-4 border-green-800 shadow-xl btn-3d">🚀 開始對戰！</button>
+        </div>
+
+        <!-- 遊戲進行畫面 -->
+        <div id="gameScreen" class="hidden flex-col gap-2 sm:gap-3">
+            <div class="relative bg-gradient-to-b from-sky-200 to-emerald-200 rounded-2xl p-2 shadow-lg border-2 border-white h-[220px] flex flex-col justify-between">
+                <div class="absolute top-1.5 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-950 font-black px-3 py-0.5 rounded-full text-xs z-30">山頂 🏆</div>
+                <div class="relative z-10 w-full max-w-lg mx-auto h-full flex flex-col-reverse justify-between border-x-2 border-amber-700/30 px-2 bg-emerald-800/10">
+                    <div class="absolute inset-x-0 bottom-[100%] h-4 bg-yellow-300 border border-amber-600 rounded text-center text-[10px] font-black">終點</div>
+                    <div id="p1Avatar" class="absolute left-[25%] -translate-x-1/2 transition-all duration-300 flex flex-col items-center z-20" style="bottom: 0%;">
+                        <div id="p1Bubble" class="hidden bg-white text-xs px-1 rounded shadow">衝刺！</div>
+                        <div class="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center shadow">🐱</div>
+                        <span class="text-[9px] font-black bg-red-600 text-white px-1 rounded-full">P1</span>
+                    </div>
+                    <div id="p2Avatar" class="absolute right-[25%] translate-x-1/2 transition-all duration-300 flex flex-col items-center z-20" style="bottom: 0%;">
+                        <div id="p2Bubble" class="hidden bg-white text-xs px-1 rounded shadow">加速！</div>
+                        <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center shadow">🐶</div>
+                        <span class="text-[9px] font-black bg-blue-600 text-white px-1 rounded-full">P2</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 sm:gap-3">
+                <!-- P1 答題區 -->
+                <div id="p1Card" class="card-gloss rounded-xl p-2 border-2 border-red-400 shadow-md relative">
+                    <div id="p1Flash" class="absolute inset-0 bg-red-500 pointer-events-none opacity-0 z-30"></div>
+                    <div class="flex justify-between items-center mb-1 pb-1 border-b text-xs font-bold text-red-700"><span>🐱 玩家一</span><span id="p1Progress">答對: 0 / 10</span></div>
+                    <div class="bg-red-50 rounded-lg p-2 text-center mb-2"><div id="p1QuestionBox" class="text-xl font-black"></div></div>
+                    <div id="p1OptionsGrid" class="grid grid-cols-2 gap-1.5"></div>
+                </div>
+                <!-- P2 答題區 -->
+                <div id="p2Card" class="card-gloss rounded-xl p-2 border-2 border-blue-400 shadow-md relative">
+                    <div id="p2Flash" class="absolute inset-0 bg-red-500 pointer-events-none opacity-0 z-30"></div>
+                    <div class="flex justify-between items-center mb-1 pb-1 border-b text-xs font-bold text-blue-700"><span>🐶 玩家二</span><span id="p2Progress">答對: 0 / 10</span></div>
+                    <div class="bg-blue-50 rounded-lg p-2 text-center mb-2"><div id="p2QuestionBox" class="text-xl font-black"></div></div>
+                    <div id="p2OptionsGrid" class="grid grid-cols-2 gap-1.5"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 結算畫面 -->
+        <div id="resultScreen" class="hidden card-gloss rounded-3xl p-6 shadow-2xl border-4 border-white text-center max-w-md mx-auto w-full">
+            <h2 id="winnerText" class="text-3xl font-black text-slate-800 mb-4">🏆 遊戲結束</h2>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <button onclick="startGame()" class="flex-1 bg-emerald-500 text-white font-black py-2.5 rounded-xl btn-3d">再對決一次</button>
+                <a href="index.html" class="flex-1 bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl btn-3d flex items-center justify-center">返回主頁</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 完整原版 10 個核心漢字題庫[cite: 1]
+        const characterData = [
+            { char: '明', left: '日', right: '月', distractors: ['木', '目', '口', '言'] },
+            { char: '林', left: '木', right: '木', distractors: ['日', '女', '米', '斤'] },
+            { char: '相', left: '木', right: '目', distractors: ['日', '月', '口', '生'] },
+            { char: '姓', left: '女', right: '生', distractors: ['木', '目', '欠', '斗'] },
+            { char: '朋', left: '月', right: '月', distractors: ['日', '木', '口', '言'] },
+            { char: '欣', left: '斤', right: '欠', distractors: ['月', '女', '生', '斗'] },
+            { char: '課', left: '言', right: '果', distractors: ['木', '米', '口', '乞'] },
+            { char: '吃', left: '口', right: '乞', distractors: ['日', '斤', '欠', '力'] },
+            { char: '料', left: '米', right: '斗', distractors: ['木', '言', '果', '生'] },
+            { char: '加', left: '力', right: '口', distractors: ['日', '乞', '欠', '女'] }
+        ];
+
+        let soundEnabled = true;
+        let audioCtx = null;
+        function initAudio() {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return null;
+            if (!audioCtx) audioCtx = new AudioContextClass();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            return audioCtx;
+        }
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                if (!initAudio()) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                const now = audioCtx.currentTime;
+                if (type === 'correct') {
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.18);
+                    gain.gain.setValueAtTime(0.25, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now); osc.stop(now + 0.25);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(240, now);
+                    osc.frequency.exponentialRampToValueAtTime(120, now + 0.2);
+                    gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now); osc.stop(now + 0.2);
+                } else if (type === 'win') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.12);
+                    osc.frequency.setValueAtTime(783.99, now + 0.24);
+                    gain.gain.setValueAtTime(0.4, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                    osc.start(now); osc.stop(now + 0.6);
+                }
+            } catch(e){}
+        }
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundIcon').textContent = soundEnabled ? '🔊' : '🔇';
+            document.getElementById('soundButton').setAttribute('aria-label', soundEnabled ? '關閉音效' : '開啟音效');
+        }
+
+        let gameState = {
+            isGameOver: false,
+            p1: { step: 0, correctCount: 0, questionIndex: 0, questions: [], lastAnswerAt: 0 },
+            p2: { step: 0, correctCount: 0, questionIndex: 0, questions: [], lastAnswerAt: 0 }
+        };
+
+        function generateQuestions() {
+            const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+            const makeQueue = () => {
+                let list = [];
+                for (let i = 0; i < 3; i++) {
+                    list = list.concat(shuffle(characterData).map(item => {
+                        const type = Math.random() < 0.5 ? 0 : 1;
+                        const answer = type === 0 ? item.right : item.left;
+                        let wrongOptions = shuffle(item.distractors.filter(d => d !== answer)).slice(0, 3);
+                        return { fullChar: item.char, leftPart: item.left, rightPart: item.right, type, answer, options: shuffle([answer, ...wrongOptions]) };
+                    }));
+                }
+                return list;
+            };
+            gameState.p1.questions = makeQueue();
+            gameState.p2.questions = makeQueue();
+        }
+
+        function startGame() {
+            gameState.isGameOver = false;
+            gameState.p1 = { step: 0, correctCount: 0, questionIndex: 0, questions: [], lastAnswerAt: 0 };
+            gameState.p2 = { step: 0, correctCount: 0, questionIndex: 0, questions: [], lastAnswerAt: 0 };
+            generateQuestions();
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            document.getElementById('gameScreen').classList.add('flex');
+            updatePositions();
+            renderQ(1); renderQ(2);
+        }
+
+        function renderQ(pNum) {
+            if (gameState.isGameOver) return;
+            const p = pNum === 1 ? gameState.p1 : gameState.p2;
+            const q = p.questions[p.questionIndex];
+            document.getElementById(pNum === 1 ? 'p1Progress' : 'p2Progress').innerText = `答對: ${p.correctCount} / 10`;
+            document.getElementById(pNum === 1 ? 'p1QuestionBox' : 'p2QuestionBox').innerHTML = q.type === 0 ? `${q.leftPart} + ❓ = ${q.fullChar}` : `❓ + ${q.rightPart} = ${q.fullChar}`;
+            const grid = document.getElementById(pNum === 1 ? 'p1OptionsGrid' : 'p2OptionsGrid');
+            grid.innerHTML = '';
+            const questionIndex = p.questionIndex;
+            q.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'bg-white text-slate-800 font-black text-xl py-2 rounded-lg border shadow-sm btn-3d';
+                btn.innerText = opt;
+                btn.onclick = () => handleAns(pNum, opt, q.answer, questionIndex);
+                grid.appendChild(btn);
+            });
+        }
+
+        function handleAns(pNum, selected, correct, questionIndex) {
+            if (gameState.isGameOver) return;
+            const p = pNum === 1 ? gameState.p1 : gameState.p2;
+            if (p.questionIndex !== questionIndex || Date.now() - p.lastAnswerAt < 180) return;
+            p.lastAnswerAt = Date.now();
+            if (selected === correct) {
+                playSound('correct');
+                p.step = Math.min(10, p.step + 1);
+                p.correctCount++;
+            } else {
+                playSound('wrong');
+                p.step = Math.max(0, p.step - 1);
+            }
+            updatePositions();
+            if (p.step >= 10) {
+                endGame(pNum);
+                return;
+            }
+            p.questionIndex++;
+            renderQ(pNum);
+        }
+
+        function updatePositions() {
+            document.getElementById('p1Avatar').style.bottom = `${(gameState.p1.step / 10) * 100}%`;
+            document.getElementById('p2Avatar').style.bottom = `${(gameState.p2.step / 10) * 100}%`;
+        }
+
+        function endGame(winner) {
+            gameState.isGameOver = true;
+            playSound('win');
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('resultScreen').classList.remove('hidden');
+            document.getElementById('winnerText').innerText = `👑 玩家${winner === 1 ? '一 (🐱)' : '二 (🐶)'} 攻頂成功！`;
+            celebrate();
+        }
+
+        function celebrate() {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            const colors = ['#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+            const layer = document.createElement('div');
+            layer.className = 'confetti-layer';
+            layer.setAttribute('aria-hidden', 'true');
+            for (let i = 0; i < 36; i++) {
+                const piece = document.createElement('span');
+                piece.className = 'confetti-piece';
+                piece.style.left = `${Math.random() * 100}%`;
+                piece.style.background = colors[i % colors.length];
+                piece.style.setProperty('--drift', `${Math.round(Math.random() * 220 - 110)}px`);
+                piece.style.setProperty('--spin', `${Math.round(Math.random() * 1080 - 540)}deg`);
+                piece.style.animationDelay = `${Math.random() * 0.35}s`;
+                layer.appendChild(piece);
+            }
+            document.body.appendChild(layer);
+            setTimeout(() => layer.remove(), 2400);
+        }
+    </script>
+</body>
+</html>
